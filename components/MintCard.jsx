@@ -22,36 +22,41 @@ function TypeBadge({ type }) {
   return <span className="badge badge-public">Public</span>
 }
 
-function MiniCountdown({ mintDate, status }) {
+function MiniCountdown({ mintDate, endDate, status }) {
   const [cd, setCd] = useState({ d:0, h:0, m:0, s:0 })
 
   useEffect(() => {
-    if (status !== 'upcoming') return
-    const tick = () => setCd(msToCountdown(new Date(mintDate) - Date.now()))
+    if (status !== 'upcoming' && status !== 'live') return
+    const target = status === 'live' ? endDate : mintDate
+    const tick = () => setCd(msToCountdown(new Date(target) - Date.now()))
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [mintDate, status])
+  }, [mintDate, endDate, status])
 
-  if (status !== 'upcoming') return null
+  if (status !== 'upcoming' && status !== 'live') return null
+
   const parts = cd.d > 0
     ? `${cd.d}d ${pad(cd.h)}h ${pad(cd.m)}m`
     : `${pad(cd.h)}h ${pad(cd.m)}m ${pad(cd.s)}s`
 
+  const isLive = status === 'live'
   return (
     <div
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
-      style={{ background: 'rgba(139,92,246,.1)', border: '1px solid rgba(139,92,246,.25)' }}
+      style={{ background: isLive ? 'rgba(16,185,129,.1)' : 'rgba(139,92,246,.1)', border: `1px solid ${isLive ? 'rgba(16,185,129,.25)' : 'rgba(139,92,246,.25)'}` }}
     >
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--purple)', flexShrink: 0 }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: isLive ? 'var(--green)' : 'var(--purple)', flexShrink: 0 }}>
         <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
       </svg>
-      <span className="text-xs mono font-bold tabnum" style={{ color: 'var(--purple)' }}>{parts}</span>
+      <span className="text-[10px] mono font-bold tabnum" style={{ color: isLive ? 'var(--green)' : 'var(--purple)' }}>
+        {isLive ? 'ends ' : ''}{parts}
+      </span>
     </div>
   )
 }
 
-export default function MintCard({ mint, featured = false }) {
+export default function MintCard({ mint, featured = false, watched = false, onToggleWatch }) {
   const status = getMintStatus(mint)
 
   return (
@@ -79,10 +84,22 @@ export default function MintCard({ mint, featured = false }) {
             </span>
           )}
         </div>
-        <div className="absolute top-2.5 right-2.5">
+        <div className="absolute top-2.5 right-2.5 flex flex-col items-end gap-1.5">
           <ChainBadge chain={mint.chain} size="xs" />
+          {onToggleWatch && (
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleWatch() }}
+              aria-label={watched ? 'Remove from watchlist' : 'Add to watchlist'}
+              style={{ width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', background: watched ? 'rgba(245,158,11,.9)' : 'rgba(0,0,0,.55)', color: watched ? 'white' : 'rgba(255,255,255,.7)', border: 'none', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill={watched ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
+          )}
         </div>
       </Link>
+
 
       {/* Body */}
       <div className="p-4 flex flex-col gap-3 flex-1">
@@ -121,7 +138,7 @@ export default function MintCard({ mint, featured = false }) {
         {/* Bottom row */}
         <div className="flex items-center justify-between gap-2 mt-auto pt-1">
           <TypeBadge type={mint.type} />
-          <MiniCountdown mintDate={mint.mintDate} status={status} />
+          <MiniCountdown mintDate={mint.mintDate} endDate={mint.endDate} status={status} />
         </div>
 
         {/* Tags */}

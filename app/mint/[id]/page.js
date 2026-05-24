@@ -1,5 +1,5 @@
 'use client'
-import { use } from 'react'
+import { use, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { getMintById, CHAINS, getMintStatus } from '@/lib/mints'
 import { fmtDateTime } from '@/lib/format'
@@ -12,8 +12,10 @@ export default function MintPage({ params }) {
   const mint   = getMintById(id)
   if (!mint) notFound()
 
-  const status = getMintStatus(mint)
+  const [status, setStatus] = useState(() => getMintStatus(mint))
   const chain  = CHAINS[mint.chain]
+
+  const refreshStatus = useCallback(() => setStatus(getMintStatus(mint)), [mint])
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6 fade-up">
@@ -117,11 +119,15 @@ export default function MintPage({ params }) {
                 <div className="w-4 h-4 rounded-full live-dot" style={{ background: 'var(--green)' }} />
                 <p className="text-2xl font-black" style={{ color: 'var(--green)' }}>LIVE NOW</p>
                 <p className="text-xs" style={{ color: 'var(--t3)' }}>Mint is currently active!</p>
-                <a href={mint.website} target="_blank" rel="noopener noreferrer"
-                  className="w-full py-3 rounded-xl text-sm font-black text-center transition-all hover:opacity-90 pulse"
-                  style={{ background: 'linear-gradient(135deg,#8b5cf6,#ec4899)', color: 'white', display: 'block' }}>
-                  Mint Now ↗
-                </a>
+                {mint.website ? (
+                  <a href={mint.website} target="_blank" rel="noopener noreferrer"
+                    className="w-full py-3 rounded-xl text-sm font-black text-center transition-all hover:opacity-90 pulse"
+                    style={{ background: 'linear-gradient(135deg,#8b5cf6,#ec4899)', color: 'white', display: 'block' }}>
+                    Mint Now ↗
+                  </a>
+                ) : (
+                  <p className="text-xs" style={{ color: 'var(--t3)' }}>No mint link available</p>
+                )}
               </>
             ) : status === 'ended' ? (
               <>
@@ -131,12 +137,14 @@ export default function MintPage({ params }) {
             ) : (
               <>
                 <p className="text-xs uppercase tracking-widest font-bold" style={{ color: 'var(--t3)' }}>Starts in</p>
-                <Countdown targetDate={mint.mintDate} />
-                <a href={mint.discord} target="_blank" rel="noopener noreferrer"
-                  className="w-full py-2.5 rounded-xl text-xs font-bold text-center transition-all hover:opacity-80"
-                  style={{ background: 'var(--bg-raised)', color: 'var(--t2)', border: '1px solid var(--border)', display: 'block' }}>
-                  Join Discord for WL
-                </a>
+                <Countdown targetDate={mint.mintDate} onExpire={refreshStatus} />
+                {mint.discord && (
+                  <a href={mint.discord} target="_blank" rel="noopener noreferrer"
+                    className="w-full py-2.5 rounded-xl text-xs font-bold text-center transition-all hover:opacity-80"
+                    style={{ background: 'var(--bg-raised)', color: 'var(--t2)', border: '1px solid var(--border)', display: 'block' }}>
+                    Join Discord for WL
+                  </a>
+                )}
               </>
             )}
           </div>

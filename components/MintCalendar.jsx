@@ -1,5 +1,5 @@
 'use client'
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { getMintStatus } from '@/lib/mints'
 
 function getDaysInMonth(year, month) {
@@ -13,10 +13,24 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export default function MintCalendar({ mints, selectedDate, onSelectDate }) {
   const today = new Date()
-  const year  = today.getFullYear()
-  const month = today.getMonth()
+  const [year,  setYear]  = useState(today.getFullYear())
+  const [month, setMonth] = useState(today.getMonth())
 
-  const daysInMonth  = getDaysInMonth(year, month)
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth()
+
+  const prevMonth = () => {
+    if (isCurrentMonth) return
+    if (month === 0) { setYear(y => y - 1); setMonth(11) }
+    else setMonth(m => m - 1)
+    onSelectDate(null)
+  }
+  const nextMonth = () => {
+    if (month === 11) { setYear(y => y + 1); setMonth(0) }
+    else setMonth(m => m + 1)
+    onSelectDate(null)
+  }
+
+  const daysInMonth   = getDaysInMonth(year, month)
   const firstDayOfWeek = getFirstDayOfMonth(year, month)
 
   const mintsByDay = useMemo(() => {
@@ -36,11 +50,34 @@ export default function MintCalendar({ mints, selectedDate, onSelectDate }) {
   for (let i = 0; i < firstDayOfWeek; i++) cells.push(null)
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
+  const monthLabel = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+
   return (
     <div className="card p-5" aria-label="Mint calendar">
-      <h2 className="text-sm font-bold mb-4" style={{ color: 'var(--t1)' }}>
-        {today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-bold" style={{ color: 'var(--t1)' }}>{monthLabel}</h2>
+        <div className="flex gap-1">
+          <button
+            onClick={prevMonth}
+            disabled={isCurrentMonth}
+            aria-label="Previous month"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-sm transition-all"
+            style={{
+              background: 'var(--bg-raised)',
+              color: isCurrentMonth ? 'var(--t4)' : 'var(--t2)',
+              border: '1px solid var(--border)',
+              cursor: isCurrentMonth ? 'not-allowed' : 'pointer',
+              opacity: isCurrentMonth ? 0.4 : 1,
+            }}
+          >‹</button>
+          <button
+            onClick={nextMonth}
+            aria-label="Next month"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-sm transition-all hover:opacity-80"
+            style={{ background: 'var(--bg-raised)', color: 'var(--t2)', border: '1px solid var(--border)' }}
+          >›</button>
+        </div>
+      </div>
 
       {/* Weekday headers */}
       <div className="grid grid-cols-7 mb-2">
@@ -57,7 +94,7 @@ export default function MintCalendar({ mints, selectedDate, onSelectDate }) {
           if (!day) return <div key={`empty-${i}`} />
 
           const mintsOnDay = mintsByDay[day] ?? []
-          const isToday    = day === today.getDate()
+          const isToday    = isCurrentMonth && day === today.getDate()
           const isSelected = selectedDate === day
           const hasMints   = mintsOnDay.length > 0
 

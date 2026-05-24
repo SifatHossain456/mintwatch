@@ -3,6 +3,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CHAINS } from '@/lib/mints'
 
+const CHAIN_CURRENCY = {
+  ethereum: 'ETH', base: 'ETH', arbitrum: 'ETH',
+  polygon: 'POL', solana: 'SOL',
+}
+
 export default function AddMintPage() {
   const router  = useRouter()
   const [form, setForm] = useState({
@@ -10,13 +15,34 @@ export default function AddMintPage() {
     supply: '', mintDate: '', endDate: '', type: 'public',
     website: '', twitter: '', discord: '', description: '',
   })
+  const [errors, setErrors] = useState({})
   const [submitted, setSubmitted] = useState(false)
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const set = (k, v) => {
+    setForm(f => {
+      const next = { ...f, [k]: v }
+      if (k === 'chain') next.currency = CHAIN_CURRENCY[v] ?? 'ETH'
+      return next
+    })
+    if (errors[k]) setErrors(e => ({ ...e, [k]: undefined }))
+  }
+
+  const validate = () => {
+    const e = {}
+    if (!form.name.trim())    e.name     = 'Collection name is required'
+    if (!form.price.trim())   e.price    = 'Mint price is required'
+    if (!form.supply)         e.supply   = 'Supply is required'
+    if (!form.mintDate)       e.mintDate = 'Start date is required'
+    if (!form.endDate)        e.endDate  = 'End date is required'
+    if (form.mintDate && form.endDate && form.endDate <= form.mintDate)
+      e.endDate = 'End must be after start'
+    return e
+  }
 
   const handleSubmit = e => {
     e.preventDefault()
-    // Save to localStorage as "community submission"
+    const errs = validate()
+    if (Object.keys(errs).length) { setErrors(errs); return }
     const submissions = JSON.parse(localStorage.getItem('mintwatch-submissions') ?? '[]')
     submissions.push({ ...form, id: `custom-${Date.now()}`, submittedAt: new Date().toISOString() })
     localStorage.setItem('mintwatch-submissions', JSON.stringify(submissions))
@@ -48,21 +74,21 @@ export default function AddMintPage() {
       </header>
 
       <form onSubmit={handleSubmit} className="card p-6 space-y-5" noValidate>
-        <Field label="Collection Name *" required>
+        <Field label="Collection Name *" error={errors.name}>
           <input value={form.name} onChange={e => set('name', e.target.value)}
-            placeholder="e.g. Bored Ape Yacht Club" required className="input-field" />
+            placeholder="e.g. Bored Ape Yacht Club" className={`input-field${errors.name ? ' input-error' : ''}`} />
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Chain *">
-            <select value={form.chain} onChange={e => set('chain', e.target.value)} className="input-field" required>
+            <select value={form.chain} onChange={e => set('chain', e.target.value)} className="input-field">
               {Object.entries(CHAINS).map(([k, v]) => (
                 <option key={k} value={k}>{v.label}</option>
               ))}
             </select>
           </Field>
           <Field label="Type *">
-            <select value={form.type} onChange={e => set('type', e.target.value)} className="input-field" required>
+            <select value={form.type} onChange={e => set('type', e.target.value)} className="input-field">
               <option value="public">Public</option>
               <option value="whitelist">Whitelist Only</option>
               <option value="free">Free Mint</option>
@@ -71,24 +97,29 @@ export default function AddMintPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Mint Price *">
-            <input value={form.price} onChange={e => set('price', e.target.value)}
-              placeholder="0.08 or FREE" required className="input-field" />
+          <Field label="Mint Price *" error={errors.price}>
+            <div className="flex gap-2">
+              <input value={form.price} onChange={e => set('price', e.target.value)}
+                placeholder="0.08 or FREE" className={`input-field flex-1${errors.price ? ' input-error' : ''}`} />
+              <span className="input-field shrink-0 w-20 text-center font-bold" style={{ color: 'var(--t2)' }}>
+                {form.currency}
+              </span>
+            </div>
           </Field>
-          <Field label="Supply *">
+          <Field label="Supply *" error={errors.supply}>
             <input type="number" value={form.supply} onChange={e => set('supply', e.target.value)}
-              placeholder="10000" required className="input-field" />
+              placeholder="10000" className={`input-field${errors.supply ? ' input-error' : ''}`} />
           </Field>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Mint Start (UTC) *">
+          <Field label="Mint Start (UTC) *" error={errors.mintDate}>
             <input type="datetime-local" value={form.mintDate} onChange={e => set('mintDate', e.target.value)}
-              required className="input-field" />
+              className={`input-field${errors.mintDate ? ' input-error' : ''}`} />
           </Field>
-          <Field label="Mint End (UTC) *">
+          <Field label="Mint End (UTC) *" error={errors.endDate}>
             <input type="datetime-local" value={form.endDate} onChange={e => set('endDate', e.target.value)}
-              required className="input-field" />
+              className={`input-field${errors.endDate ? ' input-error' : ''}`} />
           </Field>
         </div>
 
@@ -128,18 +159,20 @@ export default function AddMintPage() {
         }
         .input-field:focus { border-color: var(--purple); }
         .input-field option { background: var(--bg-card); }
+        .input-error { border-color: var(--red) !important; }
       `}</style>
     </div>
   )
 }
 
-function Field({ label, children, required }) {
+function Field({ label, children, error }) {
   return (
     <div className="space-y-1.5">
       <label className="text-[10px] uppercase tracking-widest font-bold block" style={{ color: 'var(--t3)' }}>
         {label}
       </label>
       {children}
+      {error && <p className="text-[11px]" style={{ color: 'var(--red)' }}>{error}</p>}
     </div>
   )
 }

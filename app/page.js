@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo } from 'react'
 import { MINTS, CHAINS, getMintStatus } from '@/lib/mints'
+import { useWatchlist } from '@/lib/watchlist'
 import MintCard     from '@/components/MintCard'
 import MintCalendar from '@/components/MintCalendar'
 
@@ -13,10 +14,16 @@ export default function HomePage() {
   const [type,         setType]         = useState('all')
   const [status,       setStatus]       = useState('upcoming')
   const [selectedDate, setSelectedDate] = useState(null)
-  const [view,         setView]         = useState('grid')   // 'grid' | 'list'
+  const [view,         setView]         = useState('grid')
+  const [search,       setSearch]       = useState('')
+  const [watchlistOnly, setWatchlistOnly] = useState(false)
+  const { ids: watchlistIds, toggle, isWatched } = useWatchlist()
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
     return MINTS.filter(m => {
+      if (watchlistOnly && !watchlistIds.includes(m.id))      return false
+      if (q && !m.name.toLowerCase().includes(q))             return false
       if (chain  !== 'all' && m.chain !== chain)              return false
       if (type   !== 'all' && m.type  !== type)               return false
       if (status !== 'all' && getMintStatus(m) !== status)    return false
@@ -26,14 +33,28 @@ export default function HomePage() {
       }
       return true
     }).sort((a, b) => new Date(a.mintDate) - new Date(b.mintDate))
-  }, [chain, type, status, selectedDate])
+  }, [chain, type, status, selectedDate, search, watchlistOnly, watchlistIds])
 
-  const featured = MINTS.filter(m => m.featured && getMintStatus(m) !== 'ended')
   const liveMints = MINTS.filter(m => getMintStatus(m) === 'live')
   const upcomingCount = MINTS.filter(m => getMintStatus(m) === 'upcoming').length
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-10 fade-up">
+
+      {/* Search */}
+      <div className="relative max-w-xl mx-auto">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--t4)', pointerEvents: 'none' }}>
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          type="search"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search mints…"
+          className="w-full pl-8 pr-4 py-2.5 rounded-xl text-sm"
+          style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', color: 'var(--t1)', outline: 'none' }}
+        />
+      </div>
 
       {/* Hero */}
       <section aria-label="Hero" className="text-center space-y-4 py-4">
@@ -91,6 +112,16 @@ export default function HomePage() {
           <div className="card p-4 space-y-4">
             <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--t3)' }}>Filters</h2>
 
+            {/* Watchlist */}
+            <button onClick={() => setWatchlistOnly(o => !o)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
+              style={{ background: watchlistOnly ? 'rgba(245,158,11,.15)' : 'var(--bg-raised)', color: watchlistOnly ? 'var(--yellow)' : 'var(--t2)', border: '1px solid ' + (watchlistOnly ? 'rgba(245,158,11,.4)' : 'var(--border)') }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill={watchlistOnly ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+              </svg>
+              Watchlist {watchlistIds.length > 0 && `(${watchlistIds.length})`}
+            </button>
+
             {/* Status */}
             <fieldset>
               <legend className="text-[9px] uppercase tracking-widest mb-2 block" style={{ color: 'var(--t4)' }}>Status</legend>
@@ -133,8 +164,8 @@ export default function HomePage() {
               </div>
             </fieldset>
 
-            {(chain !== 'all' || type !== 'all' || status !== 'upcoming' || selectedDate) && (
-              <button onClick={() => { setChain('all'); setType('all'); setStatus('upcoming'); setSelectedDate(null) }}
+            {(chain !== 'all' || type !== 'all' || status !== 'upcoming' || selectedDate || watchlistOnly || search) && (
+              <button onClick={() => { setChain('all'); setType('all'); setStatus('upcoming'); setSelectedDate(null); setWatchlistOnly(false); setSearch('') }}
                 className="text-[10px] w-full py-1.5 rounded-lg transition-colors"
                 style={{ color: 'var(--t3)', background: 'var(--bg-raised)', border: '1px solid var(--border)' }}>
                 Clear all filters
@@ -171,13 +202,13 @@ export default function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((mint, i) => (
                 <div key={mint.id} style={{ animationDelay: `${i * 40}ms` }} className="fade-up">
-                  <MintCard mint={mint} featured={mint.featured} />
+                  <MintCard mint={mint} featured={mint.featured} watched={isWatched(mint.id)} onToggleWatch={() => toggle(mint.id)} />
                 </div>
               ))}
             </div>
           ) : (
             <div className="space-y-2">
-              {filtered.map(mint => <ListRow key={mint.id} mint={mint} />)}
+              {filtered.map(mint => <ListRow key={mint.id} mint={mint} watched={isWatched(mint.id)} onToggleWatch={() => toggle(mint.id)} />)}
             </div>
           )}
         </section>
@@ -186,26 +217,31 @@ export default function HomePage() {
   )
 }
 
-function ListRow({ mint }) {
+function ListRow({ mint, watched, onToggleWatch }) {
   const status = getMintStatus(mint)
-  const statusColor = status === 'live' ? 'var(--green)' : status === 'ended' ? 'var(--t4)' : 'var(--purple)'
 
   return (
-    <a href={`/mint/${mint.id}`}
-      className="card flex items-center gap-4 px-4 py-3 hover:-translate-y-0.5 transition-transform"
-      style={{ display: 'flex', textDecoration: 'none' }}
-    >
-      <img src={mint.image} alt={mint.name} width={40} height={40} className="rounded-xl shrink-0 object-cover" loading="lazy" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold truncate" style={{ color: 'var(--t1)' }}>{mint.name}</p>
-        <p className="text-[10px]" style={{ color: 'var(--t3)' }}>{new Date(mint.mintDate).toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</p>
-      </div>
-      <span className="text-xs font-black mono shrink-0" style={{ color: status === 'live' ? 'var(--green)' : 'var(--t1)' }}>
-        {mint.price === 'FREE' ? 'FREE' : `${mint.price} ${mint.currency}`}
-      </span>
-      <span className={`badge shrink-0 ${status === 'live' ? 'badge-live' : status === 'ended' ? 'badge-ended' : 'badge-upcoming'}`}>
-        {status}
-      </span>
-    </a>
+    <div className="card flex items-center gap-4 px-4 py-3 hover:-translate-y-0.5 transition-transform">
+      <a href={`/mint/${mint.id}`} className="flex items-center gap-4 flex-1 min-w-0" style={{ textDecoration: 'none' }}>
+        <img src={mint.image} alt={mint.name} width={40} height={40} className="rounded-xl shrink-0 object-cover" loading="lazy" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold truncate" style={{ color: 'var(--t1)' }}>{mint.name}</p>
+          <p className="text-[10px]" style={{ color: 'var(--t3)' }}>{new Date(mint.mintDate).toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</p>
+        </div>
+        <span className="text-xs font-black mono shrink-0" style={{ color: status === 'live' ? 'var(--green)' : 'var(--t1)' }}>
+          {mint.price === 'FREE' ? 'FREE' : `${mint.price} ${mint.currency}`}
+        </span>
+        <span className={`badge shrink-0 ${status === 'live' ? 'badge-live' : status === 'ended' ? 'badge-ended' : 'badge-upcoming'}`}>
+          {status}
+        </span>
+      </a>
+      <button onClick={onToggleWatch} aria-label={watched ? 'Remove from watchlist' : 'Add to watchlist'}
+        className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+        style={{ background: watched ? 'rgba(245,158,11,.15)' : 'transparent', color: watched ? 'var(--yellow)' : 'var(--t4)', border: '1px solid ' + (watched ? 'rgba(245,158,11,.35)' : 'transparent') }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill={watched ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+      </button>
+    </div>
   )
 }
