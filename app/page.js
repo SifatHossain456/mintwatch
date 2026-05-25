@@ -35,8 +35,8 @@ export default function HomePage() {
     }).sort((a, b) => new Date(a.mintDate) - new Date(b.mintDate))
   }, [chain, type, status, selectedDate, search, watchlistOnly, watchlistIds])
 
-  const liveMints = MINTS.filter(m => getMintStatus(m) === 'live')
-  const upcomingCount = MINTS.filter(m => getMintStatus(m) === 'upcoming').length
+  const liveMints = useMemo(() => MINTS.filter(m => getMintStatus(m) === 'live'), [])
+  const upcomingCount = useMemo(() => MINTS.filter(m => getMintStatus(m) === 'upcoming').length, [])
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-10 fade-up">
