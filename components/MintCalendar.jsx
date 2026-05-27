@@ -91,7 +91,7 @@ export default function MintCalendar({ mints, selectedDate, onSelectDate }) {
       {/* Day cells */}
       <div className="grid grid-cols-7 gap-1">
         {cells.map((day, i) => {
-          if (!day) return <div key={`empty-${i}`} />
+          if (!day) return <div key={`empty-${i}`} aria-hidden="true" />
 
           const mintsOnDay = mintsByDay[day] ?? []
           const isToday    = isCurrentMonth && day === today.getDate()

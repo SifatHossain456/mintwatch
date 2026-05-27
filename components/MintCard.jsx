@@ -125,7 +125,7 @@ export default function MintCard({ mint, featured = false, watched = false, onTo
           <div>
             <p className="text-[8px] uppercase tracking-widest" style={{ color: 'var(--t4)' }}>Supply</p>
             <p className="text-sm font-black mono" style={{ color: 'var(--t1)' }}>
-              {parseInt(mint.supply).toLocaleString()}
+              {Number.isFinite(mint.supply) ? mint.supply.toLocaleString() : String(mint.supply)}
             </p>
           </div>
         </div>
