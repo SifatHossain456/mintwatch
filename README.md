@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# MintWatch — NFT Mint Calendar
+
+Track upcoming and live NFT mints across Ethereum, Base, Polygon, and Arbitrum. Filter by chain, date, and type. Add community mints. Never miss a drop.
+
+## Features
+
+- **Mint Calendar** — Monthly calendar view with mints color-coded by status (live / upcoming / ended)
+- **Mint Feed** — Card grid with search, chain filter, and sort by date or price
+- **Mint Detail** — Per-mint page with full description, supply, price, mint date, and direct mint link
+- **Add a Mint** — Community submission form to add new mints with validation
+- **Watchlist** — Save mints to a local watchlist stored in `localStorage`
+- **Countdown** — Live countdown timer on upcoming mints with aria-live announcements
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 15 App Router |
+| Styling | Tailwind CSS v4 + CSS variables |
+| State | React `useMemo`, `useState`, `localStorage` |
+| Data | Static JSON + user submissions |
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+git clone https://github.com/SifatHossain456/mintwatch.git
+cd mintwatch
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+No environment variables required.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/
+├── page.js            # Mint feed + calendar toggle
+├── mint/[id]/         # Mint detail page
+└── add/               # Community submission form
+components/
+├── MintCard.jsx       # Mint card with countdown
+├── MintCalendar.jsx   # Monthly calendar grid
+└── Countdown.jsx      # Live countdown timer
+```
 
-## Learn More
+## License
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
